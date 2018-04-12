@@ -68,6 +68,8 @@ endif
 TEES_LFLAGS	+= -lpthread
 # Needed to get clock_gettime() for for glibc versions before 2.17
 TEES_LFLAGS	+= -lrt
+# For Raspbian OS
+TEES_LFLAGS	+= -static
 
 tee-supplicant: $(TEES_FILE)
 
