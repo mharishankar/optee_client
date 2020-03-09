@@ -51,6 +51,8 @@
 /* How many device sequence numbers will be tried before giving up */
 #define TEEC_MAX_DEV_SEQ	10
 
+#define SHIFT_U32(v, shift)	((uint32_t)(v) << (shift))
+
 static pthread_mutex_t teec_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void teec_mutex_lock(pthread_mutex_t *mu)
@@ -480,6 +482,15 @@ static void uuid_to_octets(uint8_t d[TEE_IOCTL_UUID_LEN], const TEEC_UUID *s)
 	memcpy(d + 8, s->clockSeqAndNode, sizeof(s->clockSeqAndNode));
 }
 
+static void uuid_from_octets(TEEC_UUID *d, const uint8_t *s)
+{
+	d->timeLow = SHIFT_U32(s[0], 24) | SHIFT_U32(s[1], 16) |
+		     SHIFT_U32(s[2], 8) | s[3];
+	d->timeMid = SHIFT_U32(s[4], 8) | s[5];
+	d->timeHiAndVersion = SHIFT_U32(s[6], 8) | s[7];
+	memcpy(d->clockSeqAndNode, s + 8, sizeof(d->clockSeqAndNode));
+}
+
 TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
 			const TEEC_UUID *destination,
 			uint32_t connection_method, const void *connection_data,
@@ -551,6 +562,18 @@ out:
 	return res;
 }
 
+TEEC_Result TEEC_SetSessionOcallHandler(TEEC_Session *session,
+							TEEC_OcallHandler handler, void *context)
+{
+	if (!session || !handler)
+		return TEEC_ERROR_BAD_PARAMETERS;
+
+	session->ocall_handler = handler;
+	session->ocall_ctx = context;
+
+	return TEEC_SUCCESS;
+}
+
 void TEEC_CloseSession(TEEC_Session *session)
 {
 	struct tee_ioctl_close_session_arg arg;
@@ -582,6 +605,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session *session, uint32_t cmd_id,
 	} buf;
 	struct tee_ioctl_buf_data buf_data;
 	TEEC_SharedMemory shm[TEEC_CONFIG_PAYLOAD_REF_COUNT];
+	TEEC_UUID ta_uuid;
 
 	memset(&buf, 0, sizeof(buf));
 	memset(&buf_data, 0, sizeof(buf_data));
@@ -617,12 +641,27 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session *session, uint32_t cmd_id,
 		goto out_free_temp_refs;
 	}
 
+restart:
 	rc = ioctl(session->ctx->fd, TEE_IOC_INVOKE, &buf_data);
 	if (rc) {
 		EMSG("TEE_IOC_INVOKE failed");
 		eorig = TEEC_ORIGIN_COMMS;
 		res = ioctl_errno_to_res(errno);
 		goto out_free_temp_refs;
+	}
+
+	if (arg->ocall_active) {
+		if (session->ocall_handler) {
+			uuid_from_octets(&ta_uuid, arg->ocall_uuid);
+			arg->ocall_ret = session->ocall_handler(session->ocall_ctx,
+				&ta_uuid, arg->ocall_func, 0, NULL);
+			arg->ocall_ret_origin = TEEC_ORIGIN_CLIENT_APP;
+		} else {
+			arg->ocall_ret = TEEC_ERROR_NOT_SUPPORTED;
+			arg->ocall_ret_origin = TEEC_ORIGIN_API;
+		}
+
+		goto restart;
 	}
 
 	res = arg->ret;

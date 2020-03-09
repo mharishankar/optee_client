@@ -50,6 +50,9 @@ TEEC_Result TEEC_RegisterSharedMemoryFileDescriptor(TEEC_Context *context,
 						    TEEC_SharedMemory *sharedMem,
 						    int fd);
 
+TEEC_Result TEEC_SetSessionOcallHandler(TEEC_Session *session,
+							TEEC_OcallHandler handler, void *context);
+
 #ifdef __cplusplus
 }
 #endif

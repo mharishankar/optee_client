@@ -203,6 +203,7 @@ extern "C" {
 #define TEEC_ORIGIN_COMMS        0x00000002
 #define TEEC_ORIGIN_TEE          0x00000003
 #define TEEC_ORIGIN_TRUSTED_APP  0x00000004
+#define TEEC_ORIGIN_CLIENT_APP   0x00000005
 
 /**
  * Session login methods, for use in TEEC_OpenSession() as parameter
@@ -373,6 +374,12 @@ typedef union {
 	TEEC_Value value;
 } TEEC_Parameter;
 
+typedef TEEC_Result (*TEEC_OcallHandler)(void *context,
+						    TEEC_UUID *taUUID,
+						    uint32_t commandId,
+							uint32_t paramTypes,
+							TEEC_Parameter params[TEEC_CONFIG_PAYLOAD_REF_COUNT]);
+
 /**
  * struct TEEC_Session - Represents a connection between a client application
  * and a trusted application.
@@ -381,6 +388,9 @@ typedef struct {
 	/* Implementation defined */
 	TEEC_Context *ctx;
 	uint32_t session_id;
+
+	TEEC_OcallHandler ocall_handler;
+	void *ocall_ctx;
 } TEEC_Session;
 
 /**
