@@ -257,6 +257,7 @@ typedef struct {
 	/* Implementation defined */
 	int fd;
 	bool reg_mem;
+	bool ocall;
 } TEEC_Context;
 
 /**

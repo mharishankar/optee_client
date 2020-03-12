@@ -70,7 +70,7 @@ static void teec_mutex_unlock(pthread_mutex_t *mu)
 }
 
 static int teec_open_dev(const char *devname, const char *capabilities,
-			 uint32_t *gen_caps)
+			 uint32_t *gen_caps, uint32_t *impl_caps)
 {
 	int fd = 0;
 	struct tee_ioctl_version_data vers;
@@ -103,6 +103,7 @@ static int teec_open_dev(const char *devname, const char *capabilities,
 	}
 
 	*gen_caps = vers.gen_caps;
+	*impl_caps = vers.impl_caps;
 	return fd;
 err:
 	close(fd);
@@ -151,12 +152,14 @@ TEEC_Result TEEC_InitializeContext(const char *name, TEEC_Context *ctx)
 
 	for (n = 0; n < TEEC_MAX_DEV_SEQ; n++) {
 		uint32_t gen_caps = 0;
+		uint32_t impl_caps = 0;
 
 		snprintf(devname, sizeof(devname), "/dev/tee%zu", n);
-		fd = teec_open_dev(devname, name, &gen_caps);
+		fd = teec_open_dev(devname, name, &gen_caps, &impl_caps);
 		if (fd >= 0) {
 			ctx->fd = fd;
 			ctx->reg_mem = gen_caps & TEE_GEN_CAP_REG_MEM;
+			ctx->ocall = impl_caps & TEE_OPTEE_CAP_OCALL;
 			return TEEC_SUCCESS;
 		}
 	}

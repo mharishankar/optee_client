@@ -60,6 +60,7 @@
  * OP-TEE specific capabilities
  */
 #define TEE_OPTEE_CAP_TZ	(1 << 0)
+#define TEE_OPTEE_CAP_OCALL	(1 << 1)/* Supports calls from TA to CA */
 
 /**
  * struct tee_ioctl_version_data - TEE version
