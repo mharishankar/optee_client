@@ -343,18 +343,6 @@ struct tee_ioctl_invoke_arg {
 	__u32 ret;
 	__u32 ret_origin;
 	__u32 num_params;
-
-	__u8 ocall_active;
-	__u32 ocall_func;
-	__u8 ocall_uuid[TEE_IOCTL_UUID_LEN];
-	__u32 ocall_ret;
-	__u32 ocall_ret_origin;
-
-	__u64 ocall_shm;
-	__u32 ocall_thread_id;
-	__u64 ocall_pages_list;
-	__u64 ocall_num_entries;
-
 	/*
 	 * this struct is 8 byte aligned since the 'struct tee_ioctl_param'
 	 * which follows requires 8 byte alignment.
@@ -466,6 +454,30 @@ struct tee_iocl_supp_send_arg {
  */
 #define TEE_IOC_SUPPL_SEND	_IOR(TEE_IOC_MAGIC, TEE_IOC_BASE + 7, \
 				     struct tee_ioctl_buf_data)
+
+struct tee_ioctl_ecall_arg {
+	__u32 func;
+	__u32 cmd_id;
+	__u32 session;
+	__u32 cancel_id;
+	__u32 ocall_id;
+	__u32 ret;
+	__u32 ret_origin;
+	__u32 num_params;
+	/*
+	 * this struct is 8 byte aligned since the 'struct tee_ioctl_param'
+	 * which follows requires 8 byte alignment.
+	 *
+	 * Commented out element used to visualize the layout dynamic part
+	 * of the struct. This field is not available at all if
+	 * num_params == 0.
+	 *
+	 * struct tee_ioctl_param params[num_params];
+	 */
+} __aligned(8);
+
+#define TEE_IOC_ECALL		_IOWR(TEE_IOC_MAGIC, TEE_IOC_BASE + 10, \
+				     struct tee_ioctl_ecall_arg)
 
 /*
  * Five syscalls are used when communicating with the TEE driver.

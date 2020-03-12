@@ -51,7 +51,12 @@ TEEC_Result TEEC_RegisterSharedMemoryFileDescriptor(TEEC_Context *context,
 						    int fd);
 
 TEEC_Result TEEC_SetSessionOcallHandler(TEEC_Session *session,
-							TEEC_OcallHandler handler, void *context);
+					TEEC_OcallHandler handler,
+					void *context);
+
+TEEC_Result TEEC_Ecall(TEEC_Session *session, uint32_t cmd_id,
+		       TEEC_Operation *operation,
+		       uint32_t *error_origin);
 
 #ifdef __cplusplus
 }
