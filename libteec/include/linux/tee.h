@@ -465,6 +465,7 @@ struct tee_ioctl_ecall_arg {
 	__u32 ret;
 	__u32 ret_origin;
 	__u32 num_params;
+	__u8 uuid[TEE_IOCTL_UUID_LEN];
 	/*
 	 * this struct is 8 byte aligned since the 'struct tee_ioctl_param'
 	 * which follows requires 8 byte alignment.

@@ -247,6 +247,14 @@ extern "C" {
  */
 #define TEEC_PARAM_TYPE_GET(p, i) (((p) >> (i * 4)) & 0xF)
 
+/**
+ * Set the i_th param type in the paramType.
+ *
+ * @param p The paramType.
+ * @param i The i-th parameter to set the type for.
+ */
+#define TEEC_PARAM_TYPE_SET(t, i) (((uint32_t)(t) & 0xF) << ((i)*4))
+
 typedef uint32_t TEEC_Result;
 
 /**
@@ -376,10 +384,10 @@ typedef union {
 } TEEC_Parameter;
 
 typedef TEEC_Result (*TEEC_OcallHandler)(void *context,
-						    TEEC_UUID *taUUID,
-						    uint32_t commandId,
-							uint32_t paramTypes,
-							TEEC_Parameter params[TEEC_CONFIG_PAYLOAD_REF_COUNT]);
+					 TEEC_UUID *taUUID,
+					 uint32_t commandId,
+					 uint32_t paramTypes,
+					 TEEC_Parameter params[TEEC_CONFIG_PAYLOAD_REF_COUNT]);
 
 /**
  * struct TEEC_Session - Represents a connection between a client application
