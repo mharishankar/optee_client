@@ -541,10 +541,10 @@ static TEEC_Result teec_ocall_process_shm_alloc(TEEC_Session *session,
 
 static TEEC_Result teec_ocall_process_invoke(TEEC_Session *session,
 			struct tee_ioctl_ecall_arg *arg,
-			struct tee_ioctl_param *params,
+			struct tee_ioctl_param *ioparams,
 			TEEC_SharedMemory *shm)
 {
-	TEEC_Parameter oparams[TEEC_CONFIG_PAYLOAD_REF_COUNT] = { 0 };
+	TEEC_Parameter params[TEEC_CONFIG_PAYLOAD_REF_COUNT] = { 0 };
 	uint32_t opt = 0;
 	size_t n;
 
@@ -555,7 +555,7 @@ static TEEC_Result teec_ocall_process_invoke(TEEC_Session *session,
 	printf("TEEC_Ecall: Invoke: Cmd Id: 0x%x\n", arg->cmd_id);
 
 	for (n = 0; n < TEEC_CONFIG_PAYLOAD_REF_COUNT; n++) {
-		switch (params[n].attr) {
+		switch (ioparams[n].attr) {
 		case TEE_IOCTL_PARAM_ATTR_TYPE_NONE:
 			opt |= TEEC_PARAM_TYPE_SET(TEEC_NONE, n);
 			break;
@@ -582,28 +582,28 @@ static TEEC_Result teec_ocall_process_invoke(TEEC_Session *session,
 			return TEEC_SUCCESS;
 		}
 
-		switch (params[n].attr) {
+		switch (ioparams[n].attr) {
 		case TEE_IOCTL_PARAM_ATTR_TYPE_NONE:
 		case TEE_IOCTL_PARAM_ATTR_TYPE_VALUE_OUTPUT:
 			break;
 		case TEE_IOCTL_PARAM_ATTR_TYPE_VALUE_INPUT:
 		case TEE_IOCTL_PARAM_ATTR_TYPE_VALUE_INOUT:
-			if (params[n].u.value.a > UINT32_MAX ||
-			    params[n].u.value.b > UINT32_MAX)
+			if (ioparams[n].u.value.a > UINT32_MAX ||
+			    ioparams[n].u.value.b > UINT32_MAX)
 				return TEEC_ERROR_BAD_PARAMETERS;
 
-			oparams[n].value.a = (uint32_t)params[n].u.value.a;
-			oparams[n].value.b = (uint32_t)params[n].u.value.b;
+			params[n].value.a = (uint32_t)ioparams[n].u.value.a;
+			params[n].value.b = (uint32_t)ioparams[n].u.value.b;
 			break;
 		case TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_INPUT:
 		case TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_INOUT:
 		case TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_OUTPUT:
-			if (params[n].u.memref.shm_id != shm->id)
+			if (ioparams[n].u.memref.shm_id != shm->id)
 				return TEEC_ERROR_BAD_STATE;
 
-			oparams[n].tmpref.buffer = PTR_ADD(shm->buffer,
-				params[n].u.memref.shm_offs);
-			oparams[n].tmpref.size = shm->size;
+			params[n].tmpref.buffer = PTR_ADD(shm->buffer,
+				ioparams[n].u.memref.shm_offs);
+			params[n].tmpref.size = ioparams[n].u.memref.size;
 			break;
 		default:
 			printf("TEEC_Ecall: Bad param type\n");
@@ -614,24 +614,27 @@ static TEEC_Result teec_ocall_process_invoke(TEEC_Session *session,
 	uuid_from_octets(&ta_uuid, arg->uuid);
 
 	ret = session->ocall_handler(session->ocall_ctx, &ta_uuid, arg->cmd_id,
-		opt, oparams);
+		opt, params);
 
 	printf("TEEC_Ecall: Invoke: CA Ret: 0x%x\n", ret);
 
 	for (n = 0; n < TEEC_CONFIG_PAYLOAD_REF_COUNT; n++) {
-		switch (params[n].attr) {
+		switch (ioparams[n].attr) {
 		case TEE_IOCTL_PARAM_ATTR_TYPE_NONE:
 		case TEE_IOCTL_PARAM_ATTR_TYPE_VALUE_INPUT:
 		case TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_INPUT:
 			break;
 		case TEE_IOCTL_PARAM_ATTR_TYPE_VALUE_INOUT:
 		case TEE_IOCTL_PARAM_ATTR_TYPE_VALUE_OUTPUT:
-			params[n].u.value.a = oparams[n].value.a;
-			params[n].u.value.b = oparams[n].value.b;
+			ioparams[n].u.value.a = params[n].value.a;
+			ioparams[n].u.value.b = params[n].value.b;
 			break;
 		case TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_INOUT:
 		case TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_OUTPUT:
-			params[n].u.memref.size = oparams[n].tmpref.size;
+			if (params[n].tmpref.size > ioparams[n].u.memref.size)
+				return TEEC_ERROR_BAD_PARAMETERS;
+
+			ioparams[n].u.memref.size = params[n].tmpref.size;
 			break;
 		default:
 			printf("TEEC_Ecall: Bad param type\n");
