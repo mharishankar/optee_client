@@ -50,13 +50,52 @@ TEEC_Result TEEC_RegisterSharedMemoryFileDescriptor(TEEC_Context *context,
 						    TEEC_SharedMemory *sharedMem,
 						    int fd);
 
-TEEC_Result TEEC_SetSessionOcallHandler(TEEC_Session *session,
-					TEEC_OcallHandler handler,
-					void *context);
-
 TEEC_Result TEEC_Ecall(TEEC_Session *session, uint32_t cmd_id,
 		       TEEC_Operation *operation,
 		       uint32_t *error_origin);
+
+/**
+ * TEEC_OpenSessioExn() - Opens a new session with the specified trusted
+ *                        application.
+ *
+ * @param context            The initialized TEE context structure in which
+ *                           scope to open the session.
+ * @param session            The session to initialize.
+ * @param destination        A structure identifying the trusted application
+ *                           with which to open a session.
+ *
+ * @param connectionMethod   The connection method to use.
+ * @param connectionData     Any data necessary to connect with the chosen
+ *                           connection method. Not supported, should be set to
+ *                           NULL.
+ * @param operation          An operation structure to use in the session. May
+ *                           be set to NULL to signify no operation structure
+ *                           needed.
+ *
+ * @param returnOrigin       A parameter which will hold the error origin if
+ *                           this function returns any value other than
+ *                           TEEC_SUCCESS.
+ *
+ * @param settings           A list of settings to use to configure the new
+ *                           session, of NULL.
+ *
+ * @param numSettings        The number of settings, if any.
+ *
+ * @return TEEC_SUCCESS               Successfully opened a new session.
+ * @return TEEC_ERROR_BAD_PARAMETERS  One or more parameters are wrong.
+ * @return TEEC_ERROR_NOT_SUPPORTED   One or more settings are not supported.
+ * @return TEEC_Result                Something else failed.
+ *
+ */
+TEEC_Result TEEC_OpenSessionEx(TEEC_Context *context,
+			       TEEC_Session *session,
+			       const TEEC_UUID *destination,
+			       uint32_t connectionMethod,
+			       const void *connectionData,
+			       TEEC_Operation *operation,
+			       uint32_t *returnOrigin,
+			       const TEEC_SessionSetting *settings,
+			       uint32_t numSettings);
 
 #ifdef __cplusplus
 }

@@ -383,11 +383,61 @@ typedef union {
 	TEEC_Value value;
 } TEEC_Parameter;
 
+/**
+ * TEEC_Result (*TEEC_OcallHandler) - Type for a CA-provided function to call
+ *                                    when the TA requests an OCALL.
+ *
+ * @param context      Arbitrary CA-provided pointer.
+ *
+ * @param taUUID       UUID of the TA whence the OCALL originated.
+ *
+ * @param commandID    ID of the command the TA requests the CA execute.
+ *
+ * @param  paramTypes  Type of data passed by the TA in the OCALL.
+
+ * @param  params      Array of parameters of type TEEC_Parameter.
+ */
 typedef TEEC_Result (*TEEC_OcallHandler)(void *context,
 					 TEEC_UUID *taUUID,
 					 uint32_t commandId,
 					 uint32_t paramTypes,
-					 TEEC_Parameter params[TEEC_CONFIG_PAYLOAD_REF_COUNT]);
+					 TEEC_Parameter params[
+					     TEEC_CONFIG_PAYLOAD_REF_COUNT]);
+
+/**
+ * enum TEEC_SessionSettingType - List of available sesttings when opening a
+ *                                session.
+ */
+typedef enum {
+	TEEC_SESSION_SETTING_OCALL = 1
+} TEEC_SessionSettingType;
+
+/**
+ * struct TEEC_SessionSettingOcall - Setting to configure the behaviour of
+ *                                   OCALLs.
+ *
+ * @param handler  Pointer to the function to execute to handle an OCALL.
+ *
+ * @param context  Arbitrary pointer to pass to the OCALL handler function.
+ */
+typedef struct {
+	TEEC_OcallHandler handler;
+	void *context;
+} TEEC_SessionSettingOcall;
+
+/**
+ * struct TEEC_SessionSetting - A setting to be used when opening a session.
+ *
+ * @param type  The type of setting this is (i.e., how to interpret the union).
+ *
+ * @param u     Union of all possible settings.
+ */
+typedef struct {
+	TEEC_SessionSettingType type;
+	union {
+		const TEEC_SessionSettingOcall *ocall;
+	} u;
+ } TEEC_SessionSetting;
 
 /**
  * struct TEEC_Session - Represents a connection between a client application
@@ -398,8 +448,7 @@ typedef struct {
 	TEEC_Context *ctx;
 	uint32_t session_id;
 
-	TEEC_OcallHandler ocall_handler;
-	void *ocall_ctx;
+	TEEC_SessionSettingOcall ocall;
 } TEEC_Session;
 
 /**

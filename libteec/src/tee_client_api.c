@@ -613,8 +613,8 @@ static TEEC_Result teec_ocall_process_invoke(TEEC_Session *session,
 
 	uuid_from_octets(&ta_uuid, arg->uuid);
 
-	ret = session->ocall_handler(session->ocall_ctx, &ta_uuid, arg->cmd_id,
-		opt, params);
+	ret = session->ocall.handler(session->ocall.context, &ta_uuid,
+		arg->cmd_id, opt, params);
 
 	printf("TEEC_Ecall: Invoke: CA Ret: 0x%x\n", ret);
 
@@ -696,8 +696,8 @@ static TEEC_Result teec_handle_ocall(TEEC_Session *session,
 
 	printf("TEEC_Ecall: OCALL\n");
 
-	if (!session->ocall_handler) {
-		arg->ret = TEEC_ERROR_NOT_SUPPORTED;
+	if (!session->ocall.handler) {
+		arg->ret = TEEC_ERROR_BAD_STATE;
 		arg->ret_origin = TEEC_ORIGIN_API;
 
 		printf("TEEC_Ecall: No handler\n");
@@ -717,7 +717,7 @@ static TEEC_Result teec_handle_ocall(TEEC_Session *session,
 		res = TEEC_SUCCESS;
 		break;
 	default:
-		printf("TEEC_Ecall: W00t?: %u\n", arg->func);
+		printf("TEEC_Ecall: Invalid OCALL function: %u\n", arg->func);
 		arg->ret = TEEC_ERROR_BAD_PARAMETERS;
 		arg->ret_origin = TEEC_ORIGIN_API;
 		break;
@@ -797,16 +797,53 @@ out:
 	return res;
 }
 
-TEEC_Result TEEC_SetSessionOcallHandler(TEEC_Session *session,
-					TEEC_OcallHandler handler, void *context)
+TEEC_Result TEEC_OpenSessionEx(TEEC_Context *ctx, TEEC_Session *session,
+			const TEEC_UUID *destination,
+			uint32_t connection_method, const void *connection_data,
+			TEEC_Operation *operation, uint32_t *ret_origin,
+			const TEEC_SessionSetting *settings,
+			uint32_t numSettings)
 {
-	if (!session || !handler)
+	uint32_t n;
+
+	TEEC_Result res;
+
+	if ((!settings && numSettings > 0) || (settings && numSettings == 0))
 		return TEEC_ERROR_BAD_PARAMETERS;
 
-	session->ocall_handler = handler;
-	session->ocall_ctx = context;
+	res = TEEC_OpenSession(ctx, session, destination, connection_method,
+		connection_data, operation, ret_origin);
+	if (res != TEEC_SUCCESS)
+		return res;
 
-	return TEEC_SUCCESS;
+	if (!settings)
+		return res;
+
+	for (n = 0; n < numSettings; n++) {
+		switch (settings[n].type) {
+		case TEEC_SESSION_SETTING_OCALL:
+			if (!ctx->ocall) {
+				res = TEEC_ERROR_NOT_SUPPORTED;
+				goto error_close_session;
+			}
+			if (!settings[n].u.ocall->handler) {
+				res = TEEC_ERROR_BAD_PARAMETERS;
+				goto error_close_session;
+			}
+			session->ocall.handler = settings[n].u.ocall->handler;
+			session->ocall.context = settings[n].u.ocall->context;
+			break;
+		default:
+			res = TEEC_ERROR_BAD_PARAMETERS;
+			goto error_close_session;
+		}
+	}
+
+	return res;
+
+error_close_session:
+	TEEC_CloseSession(session);
+	return res;
 }
 
 void TEEC_CloseSession(TEEC_Session *session)
