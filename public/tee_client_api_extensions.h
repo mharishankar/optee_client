@@ -50,10 +50,6 @@ TEEC_Result TEEC_RegisterSharedMemoryFileDescriptor(TEEC_Context *context,
 						    TEEC_SharedMemory *sharedMem,
 						    int fd);
 
-TEEC_Result TEEC_Ecall(TEEC_Session *session, uint32_t cmd_id,
-		       TEEC_Operation *operation,
-		       uint32_t *error_origin);
-
 /**
  * TEEC_OpenSessioExn() - Opens a new session with the specified trusted
  *                        application.
