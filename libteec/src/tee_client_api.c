@@ -631,7 +631,10 @@ static TEEC_Result teec_ocall_process_invoke(TEEC_Session *session,
 			break;
 		case TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_INOUT:
 		case TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_OUTPUT:
-			if (params[n].tmpref.size > ioparams[n].u.memref.size)
+			if ((params[n].tmpref.buffer !=
+				PTR_ADD(shm->buffer,
+				        ioparams[n].u.memref.shm_offs)) ||
+			    (params[n].tmpref.size > ioparams[n].u.memref.size))
 				return TEEC_ERROR_BAD_PARAMETERS;
 
 			ioparams[n].u.memref.size = params[n].tmpref.size;
