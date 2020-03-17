@@ -505,11 +505,7 @@ static TEEC_Result teec_ocall_process_shm_alloc(TEEC_Session *session,
 			struct tee_ioctl_param *params,
 			TEEC_SharedMemory *shm)
 {
-	printf("TEEC_Ecall: SHM Alloc: Req\n");
-
 	if (shm->id != -1) {
-		printf("TEEC_Ecall: SHM Alloc: Bad State\n");
-
 		arg->ret = TEEC_ERROR_BAD_STATE;
 		arg->ret_origin = TEEC_ORIGIN_API;
 
@@ -517,8 +513,6 @@ static TEEC_Result teec_ocall_process_shm_alloc(TEEC_Session *session,
 	}
 
 	if (params[0].attr != TEE_IOCTL_PARAM_ATTR_TYPE_VALUE_INOUT) {
-		printf("TEEC_Ecall: SHM Alloc: Bad Params\n");
-
 		arg->ret = TEEC_ERROR_BAD_PARAMETERS;
 		arg->ret_origin = TEEC_ORIGIN_API;
 
@@ -533,8 +527,6 @@ static TEEC_Result teec_ocall_process_shm_alloc(TEEC_Session *session,
 		params[0].u.value.a = shm->id;
 
 	arg->ret_origin = TEEC_ORIGIN_API;
-
-	printf("TEEC_Ecall: SHM Alloc: Res: 0x%x\n", arg->ret);
 
 	return TEEC_SUCCESS;
 }
@@ -551,8 +543,6 @@ static TEEC_Result teec_ocall_process_invoke(TEEC_Session *session,
 	TEEC_UUID ta_uuid = { 0 };
 
 	unsigned int ret;
-
-	printf("TEEC_Ecall: Invoke: Cmd Id: 0x%x\n", arg->cmd_id);
 
 	for (n = 0; n < TEEC_CONFIG_PAYLOAD_REF_COUNT; n++) {
 		switch (ioparams[n].attr) {
@@ -578,7 +568,6 @@ static TEEC_Result teec_ocall_process_invoke(TEEC_Session *session,
 			opt |= TEEC_PARAM_TYPE_SET(TEEC_MEMREF_TEMP_OUTPUT, n);
 			break;
 		default:
-			printf("TEEC_Ecall: Bad param type\n");
 			return TEEC_SUCCESS;
 		}
 
@@ -606,7 +595,6 @@ static TEEC_Result teec_ocall_process_invoke(TEEC_Session *session,
 			params[n].tmpref.size = ioparams[n].u.memref.size;
 			break;
 		default:
-			printf("TEEC_Ecall: Bad param type\n");
 			return TEEC_SUCCESS;
 		}
 	}
@@ -615,8 +603,6 @@ static TEEC_Result teec_ocall_process_invoke(TEEC_Session *session,
 
 	ret = session->ocall.handler(session->ocall.context, &ta_uuid,
 		arg->cmd_id, opt, params);
-
-	printf("TEEC_Ecall: Invoke: CA Ret: 0x%x\n", ret);
 
 	for (n = 0; n < TEEC_CONFIG_PAYLOAD_REF_COUNT; n++) {
 		switch (ioparams[n].attr) {
@@ -640,7 +626,6 @@ static TEEC_Result teec_ocall_process_invoke(TEEC_Session *session,
 			ioparams[n].u.memref.size = params[n].tmpref.size;
 			break;
 		default:
-			printf("TEEC_Ecall: Bad param type\n");
 			return TEEC_ERROR_BAD_PARAMETERS;
 		}
 	}
@@ -655,14 +640,9 @@ static void teec_ocall_process_shm_free(struct tee_ioctl_ecall_arg *arg,
 			struct tee_ioctl_param *params,
 			TEEC_SharedMemory *shm)
 {
-	printf("TEEC_Ecall: SHM Free: Req\n");
-
 	if (shm->id == -1) {
 		arg->ret = TEEC_ERROR_BAD_STATE;
 		arg->ret_origin = TEEC_ORIGIN_API;
-
-		printf("TEEC_Ecall: SHM Free: Bad state\n");
-
 		return;
 	}
 
@@ -670,9 +650,6 @@ static void teec_ocall_process_shm_free(struct tee_ioctl_ecall_arg *arg,
 	    shm->id != (int)params[0].u.value.a) {
 		arg->ret = TEEC_ERROR_BAD_PARAMETERS;
 		arg->ret_origin = TEEC_ORIGIN_API;
-
-		printf("TEEC_Ecall: SHM Free: Bad params\n");
-
 		return;
 	}
 
@@ -680,8 +657,6 @@ static void teec_ocall_process_shm_free(struct tee_ioctl_ecall_arg *arg,
 
 	arg->ret = TEEC_SUCCESS;
 	arg->ret_origin = TEEC_ORIGIN_API;
-
-	printf("TEEC_Ecall: SHM Alloc: Res: 0x%x\n", arg->ret);
 }
 
 static TEEC_Result teec_handle_ocall(TEEC_Session *session,
@@ -697,13 +672,9 @@ static TEEC_Result teec_handle_ocall(TEEC_Session *session,
 
 	TEEC_Result res = TEEC_SUCCESS;
 
-	printf("TEEC_Ecall: OCALL\n");
-
 	if (!session->ocall.handler) {
 		arg->ret = TEEC_ERROR_BAD_STATE;
 		arg->ret_origin = TEEC_ORIGIN_API;
-
-		printf("TEEC_Ecall: No handler\n");
 		return TEEC_SUCCESS;
 	}
 
@@ -720,7 +691,6 @@ static TEEC_Result teec_handle_ocall(TEEC_Session *session,
 		res = TEEC_SUCCESS;
 		break;
 	default:
-		printf("TEEC_Ecall: Invalid OCALL function: %u\n", arg->func);
 		arg->ret = TEEC_ERROR_BAD_PARAMETERS;
 		arg->ret_origin = TEEC_ORIGIN_API;
 		break;
