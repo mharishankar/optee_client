@@ -198,6 +198,8 @@ extern "C" {
  * TEEC_ORIGIN_TEE          The error originated within the common TEE code.
  * TEEC_ORIGIN_TRUSTED_APP  The error originated within the Trusted Application
  *                          code.
+ * TEEC_ORIGIN_CLIENT_APP   The error originated within the Client Application
+ *                          code.
  */
 #define TEEC_ORIGIN_API          0x00000001
 #define TEEC_ORIGIN_COMMS        0x00000002

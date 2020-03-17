@@ -51,7 +51,7 @@ TEEC_Result TEEC_RegisterSharedMemoryFileDescriptor(TEEC_Context *context,
 						    int fd);
 
 /**
- * TEEC_OpenSessioExn() - Opens a new session with the specified trusted
+ * TEEC_OpenSessionEx() - Opens a new session with the specified trusted
  *                        application.
  *
  * @param context            The initialized TEE context structure in which
