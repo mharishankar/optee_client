@@ -127,7 +127,8 @@ static int teec_shm_alloc(int fd, size_t size, int *id)
 	return shm_fd;
 }
 
-static int teec_shm_register(int fd, void *buf, size_t size, int *id)
+static int teec_shm_register(int fd, void *buf, size_t size, int *id, 
+			     uint32_t flags)
 {
 	int shm_fd = 0;
 	struct tee_ioctl_shm_register_data data;
@@ -136,6 +137,7 @@ static int teec_shm_register(int fd, void *buf, size_t size, int *id)
 
 	data.addr = (uintptr_t)buf;
 	data.length = size;
+	data.flags = flags;
 	shm_fd = ioctl(fd, TEE_IOC_SHM_REGISTER, &data);
 	if (shm_fd < 0)
 		return -1;
@@ -505,6 +507,9 @@ static TEEC_Result teec_ocall_process_shm_alloc(TEEC_Session *session,
 			struct tee_ioctl_param *params,
 			TEEC_SharedMemory *shm)
 {
+	TEEC_Context *ctx = session->ctx;
+	int fd;
+
 	if (shm->id != -1) {
 		arg->ret = TEEC_ERROR_BAD_STATE;
 		arg->ret_origin = TEEC_ORIGIN_API;
@@ -522,9 +527,38 @@ static TEEC_Result teec_ocall_process_shm_alloc(TEEC_Session *session,
 	shm->size = params[0].u.value.b;
 	shm->flags = TEEC_MEM_INPUT | TEEC_MEM_OUTPUT;
 
-	arg->ret = TEEC_AllocateSharedMemory(session->ctx, shm);
-	if (arg->ret == TEEC_SUCCESS)
-		params[0].u.value.a = shm->id;
+	if (ctx->reg_mem) {
+		shm->buffer = malloc(shm->size);
+		if (!shm->buffer)
+			return TEEC_ERROR_OUT_OF_MEMORY;
+
+		fd = teec_shm_register(ctx->fd, shm->buffer, shm->size,
+			&shm->id, TEE_IOCTL_SHM_OCALL);
+		if (fd < 0) {
+			free(shm->buffer);
+			shm->buffer = NULL;
+			return TEEC_ERROR_OUT_OF_MEMORY;
+		}
+
+		shm->fd = -1;
+		shm->registered_fd = fd;
+	} else {
+		fd = teec_shm_alloc(ctx->fd, shm->size, &shm->id);
+		if (fd < 0)
+			return TEEC_ERROR_OUT_OF_MEMORY;
+
+		shm->buffer = mmap(NULL, shm->size, PROT_READ | PROT_WRITE,
+			MAP_SHARED, fd, 0);
+		if (shm->buffer == (void *)MAP_FAILED) {
+			shm->id = -1;
+			return TEEC_ERROR_OUT_OF_MEMORY;
+		}
+
+		shm->fd = fd;
+		shm->registered_fd = -1;
+	}
+
+	params[0].u.value.a = shm->id;
 
 	arg->ret_origin = TEEC_ORIGIN_API;
 
@@ -653,7 +687,18 @@ static void teec_ocall_process_shm_free(struct tee_ioctl_ecall_arg *arg,
 		return;
 	}
 
-	TEEC_ReleaseSharedMemory(shm);
+	if (shm->registered_fd >= 0) {
+		free(shm->buffer);
+		close(shm->registered_fd);
+	} else {
+		munmap(shm->buffer, shm->size);
+		close(shm->fd);
+	}
+
+	shm->id = -1;
+	shm->fd = -1;
+	shm->buffer = NULL;
+	shm->registered_fd = -1;
 
 	arg->ret = TEEC_SUCCESS;
 	arg->ret_origin = TEEC_ORIGIN_API;
@@ -1043,7 +1088,7 @@ TEEC_Result TEEC_RegisterSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
 	if (!s)
 		s = 8;
 	if (ctx->reg_mem) {
-		fd = teec_shm_register(ctx->fd, shm->buffer, s, &shm->id);
+		fd = teec_shm_register(ctx->fd, shm->buffer, s, &shm->id, 0);
 		if (fd < 0)
 			return TEEC_ERROR_OUT_OF_MEMORY;
 		shm->registered_fd = fd;
@@ -1116,7 +1161,7 @@ TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
 		if (!shm->buffer)
 			return TEEC_ERROR_OUT_OF_MEMORY;
 
-		fd = teec_shm_register(ctx->fd, shm->buffer, s, &shm->id);
+		fd = teec_shm_register(ctx->fd, shm->buffer, s, &shm->id, 0);
 		if (fd < 0) {
 			free(shm->buffer);
 			shm->buffer = NULL;
@@ -1138,6 +1183,7 @@ TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
 		shm->registered_fd = -1;
 	}
 
+	shm->fd = -1;
 	shm->shadow_buffer = NULL;
 	shm->alloced_size = s;
 	shm->buffer_allocated = true;

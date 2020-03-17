@@ -308,6 +308,7 @@ typedef struct {
 	int id;
 	size_t alloced_size;
 	void *shadow_buffer;
+	int fd;
 	int registered_fd;
 	bool buffer_allocated;
 } TEEC_SharedMemory;
