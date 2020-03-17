@@ -906,6 +906,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context *ctx, TEEC_Session *session,
 	if (res == TEEC_SUCCESS) {
 		session->ctx = ctx;
 		session->session_id = arg->session;
+		session->ocall.handler = NULL;
 	}
 	teec_post_process_operation(operation, params, shm);
 
