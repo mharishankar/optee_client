@@ -51,6 +51,9 @@
 /* How many device sequence numbers will be tried before giving up */
 #define TEEC_MAX_DEV_SEQ	10
 
+/* No SHM flags */
+#define TEE_IOCTL_SHM_NONE	0
+
 /* Helpers to access memref parts of a struct tee_ioctl_param */
 #define MEMREF_SHM_ID(p)	((p)->c)
 #define MEMREF_SHM_OFFS(p)	((p)->a)
@@ -123,7 +126,8 @@ static int teec_shm_alloc(int fd, size_t size, int *id)
 	return shm_fd;
 }
 
-static int teec_shm_register(int fd, void *buf, size_t size, int *id)
+static int teec_shm_register(int fd, void *buf, size_t size, int *id,
+			     uint32_t flags)
 {
 	int shm_fd = 0;
 	struct tee_ioctl_shm_register_data data;
@@ -132,6 +136,7 @@ static int teec_shm_register(int fd, void *buf, size_t size, int *id)
 
 	data.addr = (uintptr_t)buf;
 	data.length = size;
+	data.flags = flags;
 	shm_fd = ioctl(fd, TEE_IOC_SHM_REGISTER, &data);
 	if (shm_fd < 0)
 		return -1;
@@ -755,7 +760,8 @@ TEEC_Result TEEC_RegisterSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
 	if (!s)
 		s = 8;
 	if (ctx->reg_mem) {
-		fd = teec_shm_register(ctx->fd, shm->buffer, s, &shm->id);
+		fd = teec_shm_register(ctx->fd, shm->buffer, s, &shm->id,
+				       TEE_IOCTL_SHM_NONE);
 		if (fd < 0)
 			return TEEC_ERROR_OUT_OF_MEMORY;
 		shm->registered_fd = fd;
@@ -828,7 +834,8 @@ TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context *ctx, TEEC_SharedMemory *shm)
 		if (!shm->buffer)
 			return TEEC_ERROR_OUT_OF_MEMORY;
 
-		fd = teec_shm_register(ctx->fd, shm->buffer, s, &shm->id);
+		fd = teec_shm_register(ctx->fd, shm->buffer, s, &shm->id,
+				       TEE_IOCTL_SHM_NONE);
 		if (fd < 0) {
 			free(shm->buffer);
 			shm->buffer = NULL;
