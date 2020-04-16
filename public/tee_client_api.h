@@ -430,6 +430,38 @@ typedef struct {
 } TEEC_Context;
 
 /**
+ * enum TEEC_SessionSettingType - List of available settings when initializing a
+ * session.
+ */
+typedef enum {
+	TEEC_SESSION_SETTING_DATA = 1
+} TEEC_SessionSettingType;
+
+/**
+ * struct TEEC_SessionSettingData - Setting to attach an arbitrary pointer to a
+ * session; useful when handling OCALLs if per-session data is required by the
+ * OCALL handler.
+ *
+ * @param data  Arbitrary pointer.
+ */
+typedef struct {
+	void *data;
+} TEEC_SessionSettingData;
+
+/**
+ * struct TEEC_SessionSetting - A setting to be used when opening a session.
+ *
+ * @param type  The type of setting this is (i.e., how to interpret the union).
+ * @param u     Union of all possible settings.
+ */
+typedef struct {
+	TEEC_SessionSettingType type;
+	union {
+		const TEEC_SessionSettingData *data;
+	} u;
+} TEEC_SessionSetting;
+
+/**
  * struct TEEC_Session - Represents a connection between a client application
  * and a trusted application.
  */
@@ -437,6 +469,7 @@ typedef struct {
 	/* Implementation defined */
 	TEEC_Context *ctx;
 	uint32_t session_id;
+	TEEC_SessionSettingData data_setting;
 } TEEC_Session;
 
 /**
