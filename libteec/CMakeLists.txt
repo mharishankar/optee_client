@@ -1,6 +1,6 @@
 project(libteec C)
 
-set(PROJECT_VERSION "1.0.0")
+set(PROJECT_VERSION "2.0.0")
 
 ################################################################################
 # Packages
